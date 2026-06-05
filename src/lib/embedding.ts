@@ -8,10 +8,13 @@ type EmbeddingTensor = {
   data: Float32Array;
 };
 
+const baseUrl = import.meta.env.BASE_URL ?? "/";
+const basePath = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+
 // Force fully local model loading.
 env.allowRemoteModels = false;
 env.allowLocalModels = true;
-env.localModelPath = "/models";
+env.localModelPath = `${basePath}/models`;
 
 let embeddingPipelinePromise: Promise<FeatureExtractionPipeline> | null = null;
 

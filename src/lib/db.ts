@@ -6,6 +6,7 @@ import {
 } from "rxdb";
 import { getRxStorageLocalstorage } from "rxdb/plugins/storage-localstorage";
 import { euclideanDistance } from "rxdb/plugins/vector";
+import { sha256 } from "js-sha256";
 
 export type NoteDocType = {
   id: string;
@@ -80,11 +81,22 @@ const vectorSchema: RxJsonSchema<VectorDocType> = {
 
 let dbPromise: Promise<NotesDatabase> | null = null;
 
+async function rxHashFunction(
+  input: string | ArrayBuffer | Blob,
+): Promise<string> {
+  if (typeof Blob !== "undefined" && input instanceof Blob) {
+    return sha256(await input.arrayBuffer());
+  }
+
+  return sha256(input as string | ArrayBuffer);
+}
+
 export function getDatabase(): Promise<NotesDatabase> {
   dbPromise ??= (async () => {
     const db = await createRxDatabase<NotesDatabaseCollections>({
       name: "notes-vector-db",
       storage: getRxStorageLocalstorage(),
+      hashFunction: rxHashFunction,
     });
 
     await db.addCollections({

@@ -1,4 +1,5 @@
 import { useMemo, useState, type ComponentProps } from "react";
+import { v4 as uuidv4 } from "uuid";
 import { saveNoteWithEmbedding } from "@/lib/db";
 import { AddNoteFab } from "./add-note-fab";
 import { getEmbeddingFromText } from "@/lib/embedding";
@@ -70,7 +71,7 @@ export function AddNoteModule({
 
       await saveNoteWithEmbedding(
         {
-          id: crypto.randomUUID(),
+          id: uuidv4(),
           title: normalizedTitle,
           content: normalizedContent,
           createdAt: Date.now(),
