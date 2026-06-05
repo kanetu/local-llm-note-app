@@ -1,0 +1,18 @@
+{
+  "name": "Note App",
+  "short_name": "Notes",
+  "description": "Local-first notes with semantic search that works offline",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0d9488",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
