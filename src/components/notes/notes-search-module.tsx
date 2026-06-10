@@ -1,11 +1,20 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { NoteDocType } from "../../lib/db";
 import { deleteNoteById } from "../../lib/db";
 import { useAutoSaveNote } from "../../hooks/use-auto-save-note";
 import { useDebouncedSemanticSearch } from "../../hooks/use-debounced-semantic-search";
 import { ConfirmDialog } from "../ui/confirm-dialog";
+import {
+  Command,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "../ui/command";
 import { NotesPane } from "./notes-pane";
-import { SearchPane } from "./search-pane";
+import { SearchFab } from "./search-fab";
 
 type NotesSearchModuleProps = {
   notes: NoteDocType[];
@@ -14,6 +23,8 @@ type NotesSearchModuleProps = {
   onError: (message: string) => void;
   onStatusChange: (status: string) => void;
   refreshNotes: (preferredNoteId?: string) => Promise<void>;
+  pendingSelectNoteId: string | null;
+  onPendingSelectHandled: () => void;
   searchDebounceMs?: number;
   autoSaveDebounceMs?: number;
 };
@@ -25,6 +36,8 @@ export function NotesSearchModule({
   onError,
   onStatusChange,
   refreshNotes,
+  pendingSelectNoteId,
+  onPendingSelectHandled,
   searchDebounceMs = 400,
   autoSaveDebounceMs = 700,
 }: Readonly<NotesSearchModuleProps>) {
@@ -32,6 +45,7 @@ export function NotesSearchModule({
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
   const [query, setQuery] = useState("");
+  const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState<NoteDocType | null>(null);
 
@@ -55,6 +69,35 @@ export function NotesSearchModule({
     handleSelectNote(nextNote);
   };
 
+  useEffect(() => {
+    if (!pendingSelectNoteId) {
+      return;
+    }
+
+    const createdNote = notes.find((note) => note.id === pendingSelectNoteId);
+    if (!createdNote) {
+      return;
+    }
+
+    handleSelectNote(createdNote);
+    onPendingSelectHandled();
+  }, [notes, onPendingSelectHandled, pendingSelectNoteId]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.key.toLowerCase() === "p") {
+        event.preventDefault();
+        setIsCommandOpen(true);
+      }
+    };
+
+    globalThis.window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      globalThis.window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
   const { isUpdating } = useAutoSaveNote({
     selectedNote,
     editTitle,
@@ -68,8 +111,17 @@ export function NotesSearchModule({
   const { results, isSearching } = useDebouncedSemanticSearch({
     query,
     debounceMs: searchDebounceMs,
+    topK: 5,
     onError,
   });
+
+  const handleCommandOpenChange = (open: boolean) => {
+    setIsCommandOpen(open);
+
+    if (!open) {
+      setQuery("");
+    }
+  };
 
   const handleDeleteSelectedNote = async (): Promise<void> => {
     if (!selectedNote) {
@@ -127,7 +179,7 @@ export function NotesSearchModule({
 
   return (
     <>
-      <div className="order-1 sm:col-span-2">
+      <div className="order-1 sm:col-span-3">
         <NotesPane
           selectedNote={selectedNote}
           notes={notes}
@@ -150,15 +202,52 @@ export function NotesSearchModule({
         />
       </div>
 
-      <div className="order-2 sm:col-span-1">
-        <SearchPane
-          query={query}
-          results={results}
-          isSearching={isSearching}
-          onQueryChange={setQuery}
-          onSelectNoteById={handleSelectNoteById}
-        />
-      </div>
+      <SearchFab onClick={() => setIsCommandOpen(true)} />
+      <CommandDialog
+        open={isCommandOpen}
+        onOpenChange={handleCommandOpenChange}
+        title="Search Notes"
+        className="top-8"
+        description="Search notes by semantic meaning"
+      >
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Search note meaning"
+            value={query}
+            onValueChange={setQuery}
+          />
+          <CommandList className="max-h-[60vh] overflow-y-auto">
+            {isSearching ? (
+              <CommandGroup heading="Status">
+                <CommandItem disabled>Searching...</CommandItem>
+              </CommandGroup>
+            ) : null}
+            <CommandEmpty>Run a search to show ranked notes.</CommandEmpty>
+            <CommandGroup heading={`Top Results (${results.length})`}>
+              {results.map((result, index) => (
+                <CommandItem
+                  key={result.note.id}
+                  value={`${result.note.id}-${result.note.title}`}
+                  onSelect={() => {
+                    handleSelectNoteById(result.note.id);
+                    setIsCommandOpen(false);
+                  }}
+                >
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <p className="truncate text-sm font-medium">{`Top ${index + 1} - ${result.note.title}`}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {result.note.content || "No content"}
+                    </p>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground">
+                    {result.score.toFixed(3)}
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </CommandDialog>
 
       <ConfirmDialog
         open={Boolean(noteToDelete)}

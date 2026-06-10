@@ -1,7 +1,9 @@
 import { Cross2Icon, UploadIcon, DownloadIcon } from "@radix-ui/react-icons";
-import { useRef } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../ui/sheet";
+import { cn } from "@/lib/utils";
 
 type SettingsDialogProps = {
   isOpen: boolean;
@@ -19,6 +21,25 @@ export function SettingsDialog({
   onImportFileSelected,
 }: Readonly<SettingsDialogProps>) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+
+    const handleResize = () => {
+      checkMobile();
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
 
   if (!isOpen) {
     return null;
@@ -40,51 +61,73 @@ export function SettingsDialog({
     event.target.value = "";
   };
 
-  return (
-    <Card className="fixed bottom-24 right-20 z-40 w-[min(520px,calc(100vw-2rem))] shadow-2xl md:right-8">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle>Settings</CardTitle>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          aria-label="Close settings"
-        >
-          <Cross2Icon />
+  const settingsContent = (
+    <div
+      className={cn("flex flex-col items-start gap-4", isMobile ? "px-4" : "")}
+    >
+      <p className="text-sm text-slate-600">
+        Only data files exported by this app can be imported.
+      </p>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="button" variant="secondary" onClick={onExport}>
+          <UploadIcon />
+          Export Notes
         </Button>
-      </CardHeader>
 
-      <CardContent className="space-y-3">
-        {/* Important the data file which is exported by this application can be imported and understandable by the application, other JSON file is not capatible */}
-        <p className="text-sm text-slate-600">
-          Only data files exported by this app can be imported.
-        </p>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handlePickFile}
+          disabled={isImporting}
+        >
+          <DownloadIcon />
+          {isImporting ? "Importing..." : "Import Notes"}
+        </Button>
+      </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" variant="secondary" onClick={onExport}>
-            <UploadIcon />
-            Export Notes
-          </Button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/json,.json"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+    </div>
+  );
 
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handlePickFile}
-            disabled={isImporting}
-          >
-            <DownloadIcon />
-            {isImporting ? "Importing..." : "Import Notes"}
-          </Button>
-        </div>
+  return (
+    <>
+      {/* Mobile Sheet View */}
+      {isMobile && (
+        <Sheet open={isOpen} onOpenChange={onClose}>
+          <SheetContent side="bottom">
+            <SheetHeader>
+              <SheetTitle>Settings</SheetTitle>
+            </SheetHeader>
+            <div className="space-y-3">{settingsContent}</div>
+          </SheetContent>
+        </Sheet>
+      )}
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/json,.json"
-          className="hidden"
-          onChange={handleFileChange}
-        />
-      </CardContent>
-    </Card>
+      {/* Desktop Card View */}
+      {!isMobile && (
+        <Card className="fixed bottom-30 right-8 z-40 w-[min(300px,calc(100vw-2rem))] shadow-2xl">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle>Settings</CardTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              aria-label="Close settings"
+            >
+              <Cross2Icon />
+            </Button>
+          </CardHeader>
+
+          <CardContent className="space-y-3">{settingsContent}</CardContent>
+        </Card>
+      )}
+    </>
   );
 }

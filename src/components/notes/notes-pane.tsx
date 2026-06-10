@@ -1,14 +1,14 @@
 import { ArrowLeftIcon } from "@radix-ui/react-icons";
+import { useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Label } from "../ui/label";
 import type { NoteDocType } from "../../lib/db";
-import { getContentPreview } from "./note-helpers";
 import { BotIcon, TrashIcon } from "lucide-react";
+import { RenameTitleDialog } from "./add-note-dialog";
 
 type NotesPaneProps = {
   selectedNote: NoteDocType | null;
@@ -27,6 +27,12 @@ type NotesPaneProps = {
   onSelectNote: (note: NoteDocType) => void;
 };
 
+type NoteDayGroup = {
+  dayKey: number;
+  label: string;
+  notes: NoteDocType[];
+};
+
 export function NotesPane({
   selectedNote,
   notes,
@@ -43,6 +49,64 @@ export function NotesPane({
   onQuickDeleteNote,
   onSelectNote,
 }: Readonly<NotesPaneProps>) {
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+
+  const groupedNotes = useMemo<NoteDayGroup[]>(() => {
+    const groups = new Map<number, NoteDocType[]>();
+
+    for (const note of notes) {
+      const createdAtDate = new Date(note.createdAt);
+      const dayKey = new Date(
+        createdAtDate.getFullYear(),
+        createdAtDate.getMonth(),
+        createdAtDate.getDate(),
+      ).getTime();
+
+      const existing = groups.get(dayKey);
+      if (existing) {
+        existing.push(note);
+      } else {
+        groups.set(dayKey, [note]);
+      }
+    }
+
+    const today = new Date();
+    const todayKey = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    ).getTime();
+    const yesterdayKey = todayKey - 24 * 60 * 60 * 1000;
+
+    return [...groups.entries()]
+      .sort((a, b) => b[0] - a[0])
+      .map(([dayKey, dayNotes]) => {
+        let label: string;
+
+        if (dayKey === todayKey) {
+          label = "Today";
+        } else if (dayKey === yesterdayKey) {
+          label = "Yesterday";
+        } else {
+          label = new Date(dayKey).toLocaleDateString(undefined, {
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          });
+        }
+
+        const sortedDayNotes = [...dayNotes];
+        sortedDayNotes.sort((a, b) => b.createdAt - a.createdAt);
+
+        return {
+          dayKey,
+          label,
+          notes: sortedDayNotes,
+        };
+      });
+  }, [notes]);
+
   const { control } = useForm<{
     title: string;
     content: string;
@@ -55,11 +119,11 @@ export function NotesPane({
 
   if (selectedNote) {
     return (
-      <Card className="shadow-lg">
-        <CardHeader className="space-y-4">
+      <Card className="ring-0">
+        <CardHeader className="space-y-4 px-0">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center justify-between w-full gap-2">
-              <Button variant="link" onClick={onBack}>
+              <Button variant="link" className="p-0" onClick={onBack}>
                 <ArrowLeftIcon />
                 Back
               </Button>
@@ -72,7 +136,7 @@ export function NotesPane({
                       : "border-emerald-200 bg-emerald-100 text-emerald-900"
                   }
                 >
-                  {isUpdating ? "Auto-saving..." : "Saved"}
+                  Status: {isUpdating ? "Auto-saving..." : "Saved"}
                 </Badge>
               </div>
             </div>
@@ -82,38 +146,25 @@ export function NotesPane({
             Created {new Date(selectedNote.createdAt).toLocaleString()}
           </p>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <Controller
-            control={control}
-            name="title"
-            render={({ field }) => (
-              <div>
-                <Label htmlFor="title" className="mb-2">
-                  Title
-                </Label>
-                <Input
-                  id="title"
-                  placeholder="Title"
-                  name={field.name}
-                  ref={field.ref}
-                  value={editTitle}
-                  onBlur={field.onBlur}
-                  onChange={(event) => {
-                    field.onChange(event);
-                    onEditTitleChange(event.target.value);
-                  }}
-                />
-              </div>
-            )}
-          />
+        <CardContent className="space-y-3 px-0">
+          <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div>
+              <Label className="mb-1 block text-xs text-slate-500">Title</Label>
+              <p className="font-medium text-slate-900">{editTitle}</p>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsRenameDialogOpen(true)}
+            >
+              Edit
+            </Button>
+          </div>
           <Controller
             control={control}
             name="content"
             render={({ field }) => (
               <div>
-                <Label htmlFor="content" className="mb-2">
-                  Content
-                </Label>{" "}
                 <Textarea
                   placeholder="Note content"
                   id="content"
@@ -144,12 +195,22 @@ export function NotesPane({
 
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
         </CardContent>
+
+        <RenameTitleDialog
+          isOpen={isRenameDialogOpen}
+          currentTitle={editTitle}
+          onClose={() => setIsRenameDialogOpen(false)}
+          onConfirm={(newTitle) => {
+            onEditTitleChange(newTitle);
+            setIsRenameDialogOpen(false);
+          }}
+        />
       </Card>
     );
   }
 
   return (
-    <Card className="shadow-lg">
+    <Card className="ring-0">
       <CardHeader className="space-y-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -165,39 +226,47 @@ export function NotesPane({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-8">
           {notes.length === 0 ? (
             <p className="text-sm text-slate-500">
               No notes yet. Use the + button.
             </p>
           ) : (
-            notes.map((note) => (
-              <div
-                key={note.id}
-                className="flex group  items-start gap-2 rounded-lg border border-transparent bg-slate-50 p-2 transition hover:border-teal-300"
-              >
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="flex-1 hover:bg-transparent justify-start cursor-pointer p-1 text-left"
-                  onClick={() => onSelectNote(note)}
-                >
-                  <p className="font-medium text-slate-900">{note.title}</p>
-                  <p className="text-xs text-slate-500">
-                    {getContentPreview(note.content)}
-                  </p>
-                </Button>
+            groupedNotes.map((group) => (
+              <div key={group.dayKey} className="space-y-2">
+                <p className="px-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  {group.label}
+                </p>
 
-                <Button
-                  type="button"
-                  variant="link"
-                  size="sm"
-                  className="invisible cursor-pointer group-hover:visible"
-                  disabled={isDeleting}
-                  onClick={() => void onQuickDeleteNote(note)}
-                >
-                  <TrashIcon className="size-4" />
-                </Button>
+                {group.notes.map((note) => (
+                  <div
+                    key={note.id}
+                    className="flex group items-start justify-between gap-2 rounded-lg border border-transparent bg-slate-50 p-2 transition hover:border-teal-300"
+                  >
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="flex-1 max-w-11/12 hover:bg-transparent justify-start cursor-pointer p-1 text-left"
+                      onClick={() => onSelectNote(note)}
+                    >
+                      <p className="font-medium text-slate-900">{note.title}</p>
+                      <p className="text-xs text-slate-500 truncate">
+                        {note.content}
+                      </p>
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      className="invisible cursor-pointer group-hover:visible"
+                      disabled={isDeleting}
+                      onClick={() => void onQuickDeleteNote(note)}
+                    >
+                      <TrashIcon className="size-4" />
+                    </Button>
+                  </div>
+                ))}
               </div>
             ))
           )}
