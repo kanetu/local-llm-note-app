@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Textarea } from "../ui/textarea";
 import { Label } from "../ui/label";
 import type { NoteDocType } from "../../lib/db";
-import { BotIcon, TrashIcon } from "lucide-react";
+import { BotIcon, PenIcon, TrashIcon, XIcon } from "lucide-react";
 import { RenameTitleDialog } from "./add-note-dialog";
 
 type NotesPaneProps = {
@@ -142,22 +142,30 @@ export function NotesPane({
             </div>
           </div>
 
-          <p className="text-sm text-slate-500">
+          <p className="text-xs text-slate-500">
             Created {new Date(selectedNote.createdAt).toLocaleString()}
           </p>
         </CardHeader>
-        <CardContent className="space-y-3 px-0">
-          <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <CardContent className=" px-0">
+          <div className="flex items-center w-fit gap-2 rounded-tl-lg rounded-tr-lg border border-slate-200 px-2 text-xs ">
             <div>
-              <Label className="mb-1 block text-xs text-slate-500">Title</Label>
               <p className="font-medium text-slate-900">{editTitle}</p>
             </div>
             <Button
               type="button"
-              variant="secondary"
+              variant="ghost"
               onClick={() => setIsRenameDialogOpen(true)}
+              className="hover:bg-transparent hover:text-blue-500 cursor-pointer p-1"
             >
-              Edit
+              <PenIcon className="size-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => void onDeleteSelectedNote()}
+              disabled={isDeleting}
+              className="hover:bg-transparent hover:text-red-500 cursor-pointer p-1"
+            >
+              <XIcon className="size-4" />
             </Button>
           </div>
           <Controller
@@ -168,7 +176,7 @@ export function NotesPane({
                 <Textarea
                   placeholder="Note content"
                   id="content"
-                  className="min-h-[50dvh]"
+                  className="min-h-[50dvh] rounded-none rounded-bl-lg rounded-tr-lg rounded-br-lg focus:ring-0 focus-visible:ring-0 forcus-visible:border-ring-0"
                   name={field.name}
                   ref={field.ref}
                   value={editContent}
@@ -182,16 +190,6 @@ export function NotesPane({
               </div>
             )}
           />
-          <div className="flex justify-end">
-            <Button
-              variant="destructive"
-              onClick={() => void onDeleteSelectedNote()}
-              disabled={isDeleting}
-            >
-              <TrashIcon className="size-4" />
-              {isDeleting ? "Deleting..." : "Delete"}
-            </Button>
-          </div>
 
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
         </CardContent>

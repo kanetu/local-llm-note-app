@@ -7,14 +7,12 @@ type UseDebouncedSemanticSearchParams = {
   query: string;
   debounceMs: number;
   topK?: number;
-  onError: (message: string) => void;
 };
 
 export function useDebouncedSemanticSearch({
   query,
   debounceMs,
   topK = 3,
-  onError,
 }: Readonly<UseDebouncedSemanticSearchParams>) {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -35,8 +33,6 @@ export function useDebouncedSemanticSearch({
 
     const timeoutId = globalThis.setTimeout(() => {
       void (async () => {
-        onError("");
-
         try {
           setIsSearching(true);
 
@@ -55,12 +51,7 @@ export function useDebouncedSemanticSearch({
           if (requestId !== searchRequestIdRef.current) {
             return;
           }
-
-          onError(
-            searchError instanceof Error
-              ? searchError.message
-              : "Failed to search notes",
-          );
+          console.error("Semantic search error:", searchError);
         } finally {
           if (requestId === searchRequestIdRef.current) {
             setIsSearching(false);
@@ -72,7 +63,7 @@ export function useDebouncedSemanticSearch({
     return () => {
       globalThis.clearTimeout(timeoutId);
     };
-  }, [debounceMs, onError, query, topK]);
+  }, [debounceMs, query, topK]);
 
   return {
     results,

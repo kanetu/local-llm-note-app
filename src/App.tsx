@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
-import { AddNoteModule } from "@/components/notes/add-note-module";
-import { NotesSearchModule } from "@/components/notes/notes-search-module";
-import { SettingsModule } from "@/components/settings/settings-module";
+import { useEffect, useRef, useState } from "react";
+import {
+  NotesModule,
+  type NotesModuleRef,
+} from "@/components/notes/notes-module";
 import { getAllNotes, getDatabase, type NoteDocType } from "@/lib/db";
 import { warmupLocalEmbedding } from "@/lib/embedding";
 import { MenuControlProvider } from "@/contexts/menu-control-context";
 import { MobileActionsProvider } from "@/contexts/mobile-actions-context";
 import { MobileActionsToggle } from "@/components/mobile-actions-toggle";
+import { BubbleButtonsPane } from "./components/bubble-buttons-pane/bubble-buttons-pane";
 
 function App() {
   const [notes, setNotes] = useState<NoteDocType[]>([]);
@@ -15,6 +17,8 @@ function App() {
   const [pendingSelectNoteId, setPendingSelectNoteId] = useState<string | null>(
     null,
   );
+
+  const noteModuleRef = useRef<NotesModuleRef>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -69,34 +73,28 @@ function App() {
 
   return (
     <main className="min-h-screen px-4 md:py-8 md:px-10">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 sm:grid-cols-3">
+        <NotesModule
+          notes={notes}
+          status={status}
+          error={error}
+          onError={setError}
+          onStatusChange={setStatus}
+          refreshNotes={refreshNotes}
+          pendingSelectNoteId={pendingSelectNoteId}
+          onPendingSelectHandled={() => setPendingSelectNoteId(null)}
+          ref={noteModuleRef}
+        />
+      </div>
       <MobileActionsProvider>
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 sm:grid-cols-3">
-          <NotesSearchModule
-            notes={notes}
-            status={status}
-            error={error}
-            onError={setError}
-            onStatusChange={setStatus}
-            refreshNotes={refreshNotes}
-            pendingSelectNoteId={pendingSelectNoteId}
-            onPendingSelectHandled={() => setPendingSelectNoteId(null)}
-          />
-        </div>
-
         <MenuControlProvider>
-          <AddNoteModule
-            onNoteCreated={(noteId) => refreshNotes(noteId)}
-            onError={setError}
-            onStatusChange={setStatus}
-          />
-
-          <SettingsModule
-            onError={setError}
-            onStatusChange={setStatus}
-            onImported={() => refreshNotes()}
+          <BubbleButtonsPane
+            noteModuleRef={noteModuleRef}
+            setError={setError}
+            setStatus={setStatus}
+            refreshNotes={refreshNotes}
           />
         </MenuControlProvider>
-
         <MobileActionsToggle />
       </MobileActionsProvider>
     </main>

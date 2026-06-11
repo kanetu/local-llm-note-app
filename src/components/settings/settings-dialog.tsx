@@ -65,12 +65,12 @@ export function SettingsDialog({
     <div
       className={cn("flex flex-col items-start gap-4", isMobile ? "px-4" : "")}
     >
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-slate-600 text-right w-full md:text-left">
         Only data files exported by this app can be imported.
       </p>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" variant="secondary" onClick={onExport}>
+      <div className="flex flex-wrap items-center justify-end w-full gap-2">
+        <Button type="button" variant="outline" onClick={onExport}>
           <UploadIcon />
           Export Notes
         </Button>
@@ -105,14 +105,14 @@ export function SettingsDialog({
             <SheetHeader>
               <SheetTitle>Settings</SheetTitle>
             </SheetHeader>
-            <div className="space-y-3">{settingsContent}</div>
+            <div className="space-y-3 mb-5">{settingsContent}</div>
           </SheetContent>
         </Sheet>
       )}
 
       {/* Desktop Card View */}
       {!isMobile && (
-        <Card className="fixed bottom-30 right-8 z-40 w-[min(300px,calc(100vw-2rem))] shadow-2xl">
+        <Card className="absolute top-[calc(-50%-55px)] right-4 z-40 w-[min(300px,calc(100vw-2rem))] shadow-2xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle>Settings</CardTitle>
             <Button
