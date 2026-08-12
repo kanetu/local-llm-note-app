@@ -1,9 +1,9 @@
-import { useEffect, useImperativeHandle, useMemo, useState } from "react";
+import { useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { NoteDocType } from "../../lib/db";
 import { deleteNoteById } from "../../lib/db";
 import { useAutoSaveNote } from "../../hooks/use-auto-save-note";
 import { ConfirmDialog } from "../ui/confirm-dialog";
-import { NotesPane } from "./notes-pane";
+import { NotesPane, type NotesPaneRef } from "./notes-pane";
 
 type NotesModuleProps = {
   notes: NoteDocType[];
@@ -20,6 +20,7 @@ type NotesModuleProps = {
 
 export type NotesModuleRef = {
   selectNoteById: (noteId: string) => void;
+  openEditTitleDialog: () => void;
 };
 
 export function NotesModule({
@@ -39,6 +40,7 @@ export function NotesModule({
   const [editContent, setEditContent] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState<NoteDocType | null>(null);
+  const notesPaneRef = useRef<NotesPaneRef>(null);
 
   const selectedNote = useMemo(
     () => notes.find((note) => note.id === selectedNoteId) ?? null,
@@ -60,6 +62,9 @@ export function NotesModule({
 
       handleSelectNote(nextNote);
     },
+    openEditTitleDialog: () => {
+      notesPaneRef.current?.openRenameDialog()
+    }
   }));
 
   useEffect(() => {
@@ -162,6 +167,7 @@ export function NotesModule({
           onDeleteSelectedNote={handleDeleteSelectedNote}
           onQuickDeleteNote={handleQuickDeleteNote}
           onSelectNote={handleSelectNote}
+          ref={notesPaneRef}
         />
       </div>
 

@@ -104,10 +104,10 @@ export function useAutoSaveNote({
     debounceMs,
     editContent,
     editTitle,
+    selectedNote,
     onError,
     onStatusChange,
     refreshNotes,
-    selectedNote,
   ]);
 
   return {

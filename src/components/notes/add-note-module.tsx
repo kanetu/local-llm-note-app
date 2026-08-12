@@ -3,22 +3,13 @@ import { v4 as uuidv4 } from "uuid";
 import { saveNoteWithEmbedding } from "@/lib/db";
 import { AddNoteFab } from "./add-note-fab";
 import { getEmbeddingFromText } from "@/lib/embedding";
+import { generateDefaultTitle } from "@/lib/utils";
 
 type AddNoteModuleProps = {
   onNoteCreated: (noteId: string) => Promise<void>;
   onError: (message: string) => void;
   onStatusChange: (status: string) => void;
 };
-
-function generateDefaultTitle(): string {
-  return `Note - ${new Date().toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })}`;
-}
 
 export function AddNoteModule({
   onNoteCreated,
@@ -65,5 +56,6 @@ export function AddNoteModule({
     }
   };
 
+  
   return <AddNoteFab onClick={() => void handleCreateNote()} />;
 }

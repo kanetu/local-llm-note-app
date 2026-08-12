@@ -3,12 +3,15 @@ import {
   NotesModule,
   type NotesModuleRef,
 } from "@/components/notes/notes-module";
-import { getAllNotes, getDatabase, type NoteDocType } from "@/lib/db";
-import { warmupLocalEmbedding } from "@/lib/embedding";
+import { getAllNotes, getDatabase, saveNoteWithEmbedding, type NoteDocType } from "@/lib/db";
+import { getEmbeddingFromText, warmupLocalEmbedding } from "@/lib/embedding";
 import { MenuControlProvider } from "@/contexts/menu-control-context";
 import { MobileActionsProvider } from "@/contexts/mobile-actions-context";
 import { MobileActionsToggle } from "@/components/mobile-actions-toggle";
 import { BubbleButtonsPane } from "./components/bubble-buttons-pane/bubble-buttons-pane";
+import { useShortcut } from "./components/shortcut/shortcut";
+import { generateDefaultTitle } from "./lib/utils";
+import { v4 as uuidv4 } from "uuid";
 
 function App() {
   const [notes, setNotes] = useState<NoteDocType[]>([]);
@@ -17,6 +20,7 @@ function App() {
   const [pendingSelectNoteId, setPendingSelectNoteId] = useState<string | null>(
     null,
   );
+  
 
   const noteModuleRef = useRef<NotesModuleRef>(null);
 
@@ -71,9 +75,40 @@ function App() {
     }
   };
 
+  const handleCreate = async () => {
+    setStatus("Creating note...");
+
+      const noteId = uuidv4();
+      const title = generateDefaultTitle();
+      const embedding = await getEmbeddingFromText(title);
+
+      await saveNoteWithEmbedding(
+        {
+          id: noteId,
+          title,
+          content: "",
+          createdAt: Date.now(),
+        },
+        embedding,
+      );
+
+      await refreshNotes(noteId);
+      setStatus("Note created");
+  }
+
+  const handleEditNoteTitle = () =>{
+    noteModuleRef.current?.openEditTitleDialog()
+  }
+
+  useShortcut({
+    onHandleAltN: handleCreate,
+    onHandleAltR: handleEditNoteTitle
+  })
+
   return (
     <main className="min-h-screen px-4 md:py-8 md:px-10">
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 sm:grid-cols-3">
+        
         <NotesModule
           notes={notes}
           status={status}
@@ -84,6 +119,7 @@ function App() {
           pendingSelectNoteId={pendingSelectNoteId}
           onPendingSelectHandled={() => setPendingSelectNoteId(null)}
           ref={noteModuleRef}
+          autoSaveDebounceMs={3000}
         />
       </div>
       <MobileActionsProvider>

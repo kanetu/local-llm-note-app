@@ -1,11 +1,10 @@
 import { ArrowLeftIcon } from "@radix-ui/react-icons";
-import { useMemo, useState } from "react";
+import { useImperativeHandle, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Textarea } from "../ui/textarea";
-import { Label } from "../ui/label";
 import type { NoteDocType } from "../../lib/db";
 import { BotIcon, PenIcon, TrashIcon, XIcon } from "lucide-react";
 import { RenameTitleDialog } from "./add-note-dialog";
@@ -19,6 +18,7 @@ type NotesPaneProps = {
   editContent: string;
   isUpdating: boolean;
   isDeleting: boolean;
+  ref?: React.Ref<NotesPaneRef>;
   onEditTitleChange: (value: string) => void;
   onEditContentChange: (value: string) => void;
   onBack: () => void;
@@ -26,6 +26,11 @@ type NotesPaneProps = {
   onQuickDeleteNote: (note: NoteDocType) => Promise<void>;
   onSelectNote: (note: NoteDocType) => void;
 };
+
+export type NotesPaneRef = {
+  openRenameDialog: () => void;
+};
+
 
 type NoteDayGroup = {
   dayKey: number;
@@ -42,6 +47,7 @@ export function NotesPane({
   editContent,
   isUpdating,
   isDeleting,
+  ref,
   onEditTitleChange,
   onEditContentChange,
   onBack,
@@ -50,6 +56,13 @@ export function NotesPane({
   onSelectNote,
 }: Readonly<NotesPaneProps>) {
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+
+
+  useImperativeHandle(ref, () => ({
+    openRenameDialog: () => {
+      setIsRenameDialogOpen(true);
+    }
+  }));
 
   const groupedNotes = useMemo<NoteDayGroup[]>(() => {
     const groups = new Map<number, NoteDocType[]>();

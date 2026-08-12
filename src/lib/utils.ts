@@ -26,3 +26,15 @@ export function writeLocalStorage(data: string) {
     }
   }
 }
+
+
+
+export function generateDefaultTitle(): string {
+  return `Note - ${new Date().toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })}`;
+}
